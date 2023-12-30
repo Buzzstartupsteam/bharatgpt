@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mongodb"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model User {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  name           String?
+  email          String?        @unique
+  hashedPassword String?
+  emailVerified  DateTime?
+  image          String?
+  accounts       Account[]
+  sessions       Session[]
+  conversations  Conversation[]
+  history        History[]
+  subscription   Subscription?
+  apiLimit       ApiLimit?
+  analyze        Analyze[]
+  // payment        Payment?
+  createdAt      DateTime       @default(now()) @map(name: "created_at")
+  updatedAt      DateTime       @default(now()) @map(name: "updated_at")
+}
+
+// model Payment {
+//   id             String         @id @default(auto()) @map("_id") @db.ObjectId
+//   status         Status
+//   refId          String         @unique
+//   user           User           @relation(fields: [userId], references: [id])
+//   userId         String         @unique @db.ObjectId
+//   paymentGateway PaymentGateway @default(STRIPE)
+//   type           PaymentType    @default(CREDIT)
+//   details        Json?
+//   gatewayLogs    Json?
+//   coupenCode     String?
+//   totalAmount    Float
+//   payableAmount  Float
+//   currency       String
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+// enum PaymentType {
+//   CREDIT
+// }
+
+// enum PaymentGateway {
+//   STRIPE
+// }
+
+// enum Status {
+//   PENDING
+//   COMPLETED
+//   FAILED
+// }
+
+model Account {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @unique @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.String
+  access_token      String?  @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.String
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Analyze {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  trainId   String    @unique
+  Messages  Message[]
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String    @db.ObjectId
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  text      String
+  role      Role
+  Analyze   Analyze  @relation(fields: [analyzeId], references: [id], onDelete: Cascade)
+  analyzeId String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  user
+  system
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model History {
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  prompt    String
+  content   String
+  type      HistoryType
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String      @db.ObjectId
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+enum HistoryType {
+  ANALYZE
+  CONTENT
+  CODE
+  ESSAY
+  IMAGE
+  SUMMARIZE
+  EMAIL
+  AMAZON_PRODUCT_DESCRIPTION
+  AMAZON_PRODUCT_FEATURES_IN_BULLETS
+  BIO_FOR_COMPANY
+  BLOG_INTRO_PASSAGE
+  BLOG_POST_CONCLUSION_CLAUSE
+  BLOG_POST_ABSTRACT
+  BLOG_POST_TOPIC_IDEAS
+  CAPTION_WRITER
+  CONTENT_UPGRADER
+  CONVINCING_BULLET_POINTS
+  CREATIVE_BIO
+  EMAIL_SUBJECT_WRITER
+  EXPLAN_TO_A_CHILD
+  FACEBOOK_AD_TITLE
+  FEATURE_INTO_ADVANTAGE
+  FUNNY_MARKETING_IDEAS
+  GOOGLE_AD_DESCRIPTION
+  GOOGLE_AD_TITLE
+  INTERACTIVE_QUESTIONS
+  MARKETING_STRATEGIES
+  PASSAGE_WRITER
+  POWERFUL_WRITER
+  POWERFUL_TITLE
+  PRIMARY_TEXT_FOR_FACEBOOK_AD
+  PRODUCT_DESCRIPTION
+  QUORA_ANSWERS
+  REAL_ESTATE_LISTING_RESIDENTIAL
+  REVIEW_REPLY
+  SENTENCE_ELABORATOR
+  SEO_BLOG_POSTS_TITLE_AND_META_DESCRIPTIONS
+  SEO_HOMEPAGE_TITLE_AND_META_DESCRIPTIONS
+  SEO_PRODUCT_PAGE_TITLE_AND_META_DESCRIPTIONS
+  SEO_SERVICES_PAGES_TITLE_AND_META_DESCRIPTIONS
+  SEO_TITLE_AND_META_DESCRIPTIONS
+  SHORT_SOCIAL_POSTS
+  STORY_WRITING
+  USP
+  WEBSITE_SUBTITLE
+  YOUTUBE_VIDEO_DESCRIPTION
+  YOUTUBE_VIDEO_IDEAS
+  YOUTUBE_VIDEO_SCRIPT_HOOK_AND_INTRODUCTION
+  YOUTUBE_VIDEO_SCRIPT_OUTLINE
+  YOUTUBE_VIDEO_TITLE
+}
+
+model Conversation {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  conversationId String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String   @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ApiLimit {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  user             User     @relation(fields: [userId], references: [id])
+  userId           String   @unique @db.ObjectId
+  count            Int      @default(0)
+  totalCount       Int      @default(100)
+  imageGenerations Int      @default(50)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Subscription {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  user                   User      @relation(fields: [userId], references: [id])
+  userId                 String    @unique @db.ObjectId
+  plan                   Plan
+  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id")
+  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
+  stripePriceId          String?   @map(name: "stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+}
+
+enum Plan {
+  KICK_OFF_KIT
+  PRIME_TIER_KIT
+  TOP_NOTCH_KIT
+  APP_CHAT
+}
